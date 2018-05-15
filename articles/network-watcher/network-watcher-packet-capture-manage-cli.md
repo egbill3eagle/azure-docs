@@ -30,7 +30,7 @@ Network Watcher packet capture allows you to create capture sessions to track tr
 
 This article uses our next generation CLI for the resource management deployment model, Azure CLI 2.0, which is available for Windows, Mac and Linux.
 
-To perform the steps in this article, you need to [install the Azure Command-Line Interface for Mac, Linux, and Windows (Azure CLI)](https://docs.microsoft.com/en-us/cli/azure/install-az-cli2).
+To perform the steps in this article, you need to [install the Azure Command-Line Interface for Mac, Linux, and Windows (Azure CLI)](https://docs.microsoft.com/cli/azure/install-az-cli2).
 
 This article takes you through the different management tasks that are currently available for packet capture.
 
@@ -69,10 +69,10 @@ az vm extension set --resource-group resourceGroupName --vm-name virtualMachineN
 
 ### Step 2
 
-To ensure that the agent is installed, run the `vm extension get` cmdlet and pass it the resource group and virtual machine name. Check the resulting list to ensure the agent is installed.
+To ensure that the agent is installed, run the `vm extension show` cmdlet and pass it the resource group and virtual machine name. Check the resulting list to ensure the agent is installed.
 
 ```azurecli
-az vm extension show -resource-group resourceGroupName --vm-name virtualMachineName --name NetworkWatcherAgentWindows
+az vm extension show --resource-group resourceGroupName --vm-name virtualMachineName --name NetworkWatcherAgentWindows
 ```
 
 The following sample is an example of the response from running `az vm extension show`
@@ -106,7 +106,7 @@ Once the preceding steps are complete, the packet capture agent is installed on 
 The next step is to retrieve the Network Watcher instance. TThe name of the Network Watcher is passed to the `az network watcher show` cmdlet in step 4.
 
 ```azurecli
-az network watcher show -resource-group resourceGroup -name networkWatcherName
+az network watcher show --resource-group resourceGroup --name networkWatcherName
 ```
 
 ### Step 2
@@ -272,6 +272,6 @@ https://{storageAccountName}.blob.core.windows.net/network-watcher-logs/subscrip
 
 Learn how to automate packet captures with Virtual machine alerts by viewing [Create an alert triggered packet capture](network-watcher-alert-triggered-packet-capture.md)
 
-Find if certain traffic is allowed in or out of your VM by visiting [Check IP flow verify](network-watcher-check-ip-flow-verify-portal.md)
+Find if certain traffic is allowed in or out of your VM by visiting [Check IP flow verify](diagnose-vm-network-traffic-filtering-problem.md)
 
 <!-- Image references -->

@@ -2,17 +2,16 @@
 title: Computer Vision API C# quick starts | Microsoft Docs
 description: Get information and code samples to help you quickly get started using C# and the Computer Vision API in Cognitive Services.
 services: cognitive-services
-author: v-royhar
-manager: JuliaNik
+author: easyj2j
 
 ms.service: cognitive-services
-ms.technology: computer-vision
+ms.component: computer-vision
 ms.topic: article
-ms.date: 06/12/2017
-ms.author: v-royhar
+ms.date: 5/07/2018
+ms.author: v-johnma
 ---
 
-# Computer Vision C# Quick Starts
+# Use the Computer Vision API with C#
 
 This article provides information and code samples to help you quickly get started using the Computer Vision API with C# to accomplish the following tasks:
 * [Analyze an image](#AnalyzeImage)
@@ -23,27 +22,28 @@ This article provides information and code samples to help you quickly get start
 
 ## Prerequisites
 
-* Get the Microsoft Computer Vision API Windows SDK [here](https://github.com/Microsoft/Cognitive-vision-windows).
-* To use the Computer Vision API, you need a subscription key. You can get free subscription keys [here](https://docs.microsoft.com/en-us/azure/cognitive-services/Computer-vision/Vision-API-How-to-Topics/HowToSubscribe).
+To use the Computer Vision API, you need a subscription key. You can get free subscription keys [here](../Vision-API-How-to-Topics/HowToSubscribe.md).
 
 ## Analyze an Image With Computer Vision API using C# <a name="AnalyzeImage"> </a>
 
-With the [Analyze Image method](https://westcentralus.dev.cognitive.microsoft.com/docs/services/56f91f2d778daf23d8ec6739/operations/56f91f2e778daf14a499e1fa), you can extract visual features based on image content. You can upload an image or specify an image URL and choose which features to return, including:
+With the [Analyze Image method](https://westus.dev.cognitive.microsoft.com/docs/services/5adf991815e1060e6355ad44/operations/56f91f2e778daf14a499e1fa), you can extract visual features based on image content. You can upload an image or specify an image URL and choose which features to return, including:
 * A detailed list of tags related to the image content.
 * A description of image content in a complete sentence.
 * The coordinates, gender, and age of any faces contained in the image.
 * The ImageType (clip art or a line drawing).
 * The dominant color, the accent color, or whether an image is black & white.
-* The category defined in this [taxonomy](https://docs.microsoft.com/en-us/azure/cognitive-services/computer-vision/category-taxonomy).
+* The category defined in this [taxonomy](https://docs.microsoft.com/azure/cognitive-services/computer-vision/category-taxonomy).
 * Does the image contain adult or sexually suggestive content?
 
 ### Analyze an image C# example request
 
 Create a new Console solution in Visual Studio, then replace Program.cs with the following code. Change the `uriBase` to use the location where you obtained your subscription keys, and replace the `subscriptionKey` value with your valid subscription key.
 
-```c#
+```csharp
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -144,68 +144,80 @@ namespace CSHttpClientSample
 		/// </summary>
 		/// <param name="json">The raw JSON string to format.</param>
 		/// <returns>The formatted JSON string.</returns>
-		static string JsonPrettyPrint(string json)
-		{
-			if (string.IsNullOrEmpty(json))
-				return string.Empty;
+        static string JsonPrettyPrint(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return string.Empty;
 
-			json = json.Replace(Environment.NewLine, "").Replace("\t", "");
+            json = json.Replace(Environment.NewLine, "").Replace("\t", "");
 
-			StringBuilder sb = new StringBuilder();
-			bool quote = false;
-			bool ignore = false;
-			int offset = 0;
-			int indentLength = 3;
-
-			foreach(char ch in json)
-			{
-				switch (ch)
-				{
-					case '"':
-						if (!ignore) quote = !quote;
-						break;
-					case '\'':
-						if (quote) ignore = !ignore;
-						break;
-				}
-
-				if (quote)
-					sb.Append(ch);
-				else
-				{
-					switch (ch)
-					{
-						case '{':
-						case '[':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', ++offset * indentLength));
-							break;
-						case '}':
-						case ']':
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', --offset * indentLength));
-							sb.Append(ch);
-							break;
-						case ',':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', offset * indentLength));
-							break;
-						case ':':
-							sb.Append(ch);
-							sb.Append(' ');
-							break;
-						default:
-							if (ch != ' ') sb.Append(ch);
-							break;
-					}
-				}
-			}
-
-			return sb.ToString().Trim();
-		}
-	}
+            string INDENT_STRING = "    ";
+            var indent = 0;
+            var quoted = false;
+            var sb = new StringBuilder();
+            for (var i = 0; i < json.Length; i++)
+            {
+                var ch = json[i];
+                switch (ch)
+                {
+                    case '{':
+                    case '[':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, ++indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case '}':
+                    case ']':
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, --indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        sb.Append(ch);
+                        break;
+                    case '"':
+                        sb.Append(ch);
+                        bool escaped = false;
+                        var index = i;
+                        while (index > 0 && json[--index] == '\\')
+                            escaped = !escaped;
+                        if (!escaped)
+                            quoted = !quoted;
+                        break;
+                    case ',':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case ':':
+                        sb.Append(ch);
+                        if (!quoted)
+                            sb.Append(" ");
+                        break;
+                    default:
+                        sb.Append(ch);
+                        break;
+                }
+            }
+            return sb.ToString();
+        }
+    }
+    static class Extensions
+    {
+        public static void ForEach<T>(this IEnumerable<T> ie, Action<T> action)
+        {
+            foreach (var i in ie)
+            {
+                action(i);
+            }
+        }
+    }
 }
 ```
 
@@ -290,8 +302,9 @@ The Domain-Specific Model is a model trained to identify a specific set of objec
 
 Create a new Console solution in Visual Studio, then replace Program.cs with the following code. Change the `uriBase` to use the location where you obtained your subscription keys, and replace the `subscriptionKey` value with your valid subscription key.
 
-```c#
+```csharp
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -396,68 +409,80 @@ namespace CSHttpClientSample
 		/// </summary>
 		/// <param name="json">The raw JSON string to format.</param>
 		/// <returns>The formatted JSON string.</returns>
-		static string JsonPrettyPrint(string json)
-		{
-			if (string.IsNullOrEmpty(json))
-				return string.Empty;
+        static string JsonPrettyPrint(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return string.Empty;
 
-			json = json.Replace(Environment.NewLine, "").Replace("\t", "");
+            json = json.Replace(Environment.NewLine, "").Replace("\t", "");
 
-			StringBuilder sb = new StringBuilder();
-			bool quote = false;
-			bool ignore = false;
-			int offset = 0;
-			int indentLength = 3;
-
-			foreach (char ch in json)
-			{
-				switch (ch)
-				{
-					case '"':
-						if (!ignore) quote = !quote;
-						break;
-					case '\'':
-						if (quote) ignore = !ignore;
-						break;
-				}
-
-				if (quote)
-					sb.Append(ch);
-				else
-				{
-					switch (ch)
-					{
-						case '{':
-						case '[':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', ++offset * indentLength));
-							break;
-						case '}':
-						case ']':
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', --offset * indentLength));
-							sb.Append(ch);
-							break;
-						case ',':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', offset * indentLength));
-							break;
-						case ':':
-							sb.Append(ch);
-							sb.Append(' ');
-							break;
-						default:
-							if (ch != ' ') sb.Append(ch);
-							break;
-					}
-				}
-			}
-
-			return sb.ToString().Trim();
-		}
-	}
+            string INDENT_STRING = "    ";
+            var indent = 0;
+            var quoted = false;
+            var sb = new StringBuilder();
+            for (var i = 0; i < json.Length; i++)
+            {
+                var ch = json[i];
+                switch (ch)
+                {
+                    case '{':
+                    case '[':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, ++indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case '}':
+                    case ']':
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, --indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        sb.Append(ch);
+                        break;
+                    case '"':
+                        sb.Append(ch);
+                        bool escaped = false;
+                        var index = i;
+                        while (index > 0 && json[--index] == '\\')
+                            escaped = !escaped;
+                        if (!escaped)
+                            quoted = !quoted;
+                        break;
+                    case ',':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case ':':
+                        sb.Append(ch);
+                        if (!quoted)
+                            sb.Append(" ");
+                        break;
+                    default:
+                        sb.Append(ch);
+                        break;
+                }
+            }
+            return sb.ToString();
+        }
+    }
+    static class Extensions
+    {
+        public static void ForEach<T>(this IEnumerable<T> ie, Action<T> action)
+        {
+            foreach (var i in ie)
+            {
+                action(i);
+            }
+        }
+    }
 }
 ```
 
@@ -486,14 +511,15 @@ A successful response is returned in JSON. Following is an example of a successf
 
 ## Get a thumbnail with Computer Vision API using C# <a name="GetThumbnail"> </a>
 
-Use the [Get Thumbnail method](https://westcentralus.dev.cognitive.microsoft.com/docs/services/56f91f2d778daf23d8ec6739/operations/56f91f2e778daf14a499e1fb) to crop an image based on its region of interest (ROI) to the height and width you desire. You can even pick an aspect ratio that differs from the aspect ratio of the input image.
+Use the [Get Thumbnail method](https://westus.dev.cognitive.microsoft.com/docs/services/5adf991815e1060e6355ad44/operations/56f91f2e778daf14a499e1fb) to crop an image based on its region of interest (ROI) to the height and width you desire. You can even pick an aspect ratio that differs from the aspect ratio of the input image.
 
 ### Get a thumbnail C# example request
 
 Create a new Console solution in Visual Studio, then replace Program.cs with the following code. Change the `uriBase` to use the location where you obtained your subscription keys, and replace the `subscriptionKey` value with your valid subscription key.
 
-```c#
+```csharp
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -604,68 +630,80 @@ namespace CSHttpClientSample
 		/// </summary>
 		/// <param name="json">The raw JSON string to format.</param>
 		/// <returns>The formatted JSON string.</returns>
-		static string JsonPrettyPrint(string json)
-		{
-			if (string.IsNullOrEmpty(json))
-				return string.Empty;
+        static string JsonPrettyPrint(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return string.Empty;
 
-			json = json.Replace(Environment.NewLine, "").Replace("\t", "");
+            json = json.Replace(Environment.NewLine, "").Replace("\t", "");
 
-			StringBuilder sb = new StringBuilder();
-			bool quote = false;
-			bool ignore = false;
-			int offset = 0;
-			int indentLength = 3;
-
-			foreach (char ch in json)
-			{
-				switch (ch)
-				{
-					case '"':
-						if (!ignore) quote = !quote;
-						break;
-					case '\'':
-						if (quote) ignore = !ignore;
-						break;
-				}
-
-				if (quote)
-					sb.Append(ch);
-				else
-				{
-					switch (ch)
-					{
-						case '{':
-						case '[':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', ++offset * indentLength));
-							break;
-						case '}':
-						case ']':
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', --offset * indentLength));
-							sb.Append(ch);
-							break;
-						case ',':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', offset * indentLength));
-							break;
-						case ':':
-							sb.Append(ch);
-							sb.Append(' ');
-							break;
-						default:
-							if (ch != ' ') sb.Append(ch);
-							break;
-					}
-				}
-			}
-
-			return sb.ToString().Trim();
-		}
-	}
+            string INDENT_STRING = "    ";
+            var indent = 0;
+            var quoted = false;
+            var sb = new StringBuilder();
+            for (var i = 0; i < json.Length; i++)
+            {
+                var ch = json[i];
+                switch (ch)
+                {
+                    case '{':
+                    case '[':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, ++indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case '}':
+                    case ']':
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, --indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        sb.Append(ch);
+                        break;
+                    case '"':
+                        sb.Append(ch);
+                        bool escaped = false;
+                        var index = i;
+                        while (index > 0 && json[--index] == '\\')
+                            escaped = !escaped;
+                        if (!escaped)
+                            quoted = !quoted;
+                        break;
+                    case ',':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case ':':
+                        sb.Append(ch);
+                        if (!quoted)
+                            sb.Append(" ");
+                        break;
+                    default:
+                        sb.Append(ch);
+                        break;
+                }
+            }
+            return sb.ToString();
+        }
+    }
+    static class Extensions
+    {
+        public static void ForEach<T>(this IEnumerable<T> ie, Action<T> action)
+        {
+            foreach (var i in ie)
+            {
+                action(i);
+            }
+        }
+    }
 }
 ```
 ### Get a Thumbnail response
@@ -693,14 +731,15 @@ StatusCode: 200, ReasonPhrase: 'OK', Version: 1.1, Content: System.Net.Http.Stre
 
 ## Optical Character Recognition (OCR) with Computer Vision API using C#<a name="OCR"> </a>
 
-Use the [Optical Character Recognition (OCR) method](https://westcentralus.dev.cognitive.microsoft.com/docs/services/56f91f2d778daf23d8ec6739/operations/56f91f2e778daf14a499e1fc) to detect printed text in an image and extract recognized characters into a machine-usable character stream.
+Use the [Optical Character Recognition (OCR) method](https://westus.dev.cognitive.microsoft.com/docs/services/5adf991815e1060e6355ad44/operations/56f91f2e778daf14a499e1fc) to detect printed text in an image and extract recognized characters into a machine-usable character stream.
 
 ### OCR C# example request
 
 Create a new Console solution in Visual Studio, then replace Program.cs with the following code. Change the `uriBase` to use the location where you obtained your subscription keys, and replace the `subscriptionKey` value with your valid subscription key.
 
-```c#
+```csharp
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -802,68 +841,80 @@ namespace CSHttpClientSample
 		/// </summary>
 		/// <param name="json">The raw JSON string to format.</param>
 		/// <returns>The formatted JSON string.</returns>
-		static string JsonPrettyPrint(string json)
-		{
-			if (string.IsNullOrEmpty(json))
-				return string.Empty;
+        static string JsonPrettyPrint(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return string.Empty;
 
-			json = json.Replace(Environment.NewLine, "").Replace("\t", "");
+            json = json.Replace(Environment.NewLine, "").Replace("\t", "");
 
-			StringBuilder sb = new StringBuilder();
-			bool quote = false;
-			bool ignore = false;
-			int offset = 0;
-			int indentLength = 3;
-
-			foreach (char ch in json)
-			{
-				switch (ch)
-				{
-					case '"':
-						if (!ignore) quote = !quote;
-						break;
-					case '\'':
-						if (quote) ignore = !ignore;
-						break;
-				}
-
-				if (quote)
-					sb.Append(ch);
-				else
-				{
-					switch (ch)
-					{
-						case '{':
-						case '[':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', ++offset * indentLength));
-							break;
-						case '}':
-						case ']':
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', --offset * indentLength));
-							sb.Append(ch);
-							break;
-						case ',':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', offset * indentLength));
-							break;
-						case ':':
-							sb.Append(ch);
-							sb.Append(' ');
-							break;
-						default:
-							if (ch != ' ') sb.Append(ch);
-							break;
-					}
-				}
-			}
-
-			return sb.ToString().Trim();
-		}
-	}
+            string INDENT_STRING = "    ";
+            var indent = 0;
+            var quoted = false;
+            var sb = new StringBuilder();
+            for (var i = 0; i < json.Length; i++)
+            {
+                var ch = json[i];
+                switch (ch)
+                {
+                    case '{':
+                    case '[':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, ++indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case '}':
+                    case ']':
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, --indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        sb.Append(ch);
+                        break;
+                    case '"':
+                        sb.Append(ch);
+                        bool escaped = false;
+                        var index = i;
+                        while (index > 0 && json[--index] == '\\')
+                            escaped = !escaped;
+                        if (!escaped)
+                            quoted = !quoted;
+                        break;
+                    case ',':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case ':':
+                        sb.Append(ch);
+                        if (!quoted)
+                            sb.Append(" ");
+                        break;
+                    default:
+                        sb.Append(ch);
+                        break;
+                }
+            }
+            return sb.ToString();
+        }
+    }
+    static class Extensions
+    {
+        public static void ForEach<T>(this IEnumerable<T> ie, Action<T> action)
+        {
+            foreach (var i in ie)
+            {
+                action(i);
+            }
+        }
+    }
 }
 ```
 
@@ -955,8 +1006,9 @@ Use the [RecognizeText method](https://westus.dev.cognitive.microsoft.com/docs/s
 
 Create a new Console solution in Visual Studio, then replace Program.cs with the following code. Change the `uriBase` to use the location where you obtained your subscription keys, and replace the `subscriptionKey` value with your valid subscription key.
 
-```c#
+```csharp
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -1094,68 +1146,80 @@ namespace CSHttpClientSample
 		/// </summary>
 		/// <param name="json">The raw JSON string to format.</param>
 		/// <returns>The formatted JSON string.</returns>
-		static string JsonPrettyPrint(string json)
-		{
-			if (string.IsNullOrEmpty(json))
-				return string.Empty;
+        static string JsonPrettyPrint(string json)
+        {
+            if (string.IsNullOrEmpty(json))
+                return string.Empty;
 
-			json = json.Replace(Environment.NewLine, "").Replace("\t", "");
+            json = json.Replace(Environment.NewLine, "").Replace("\t", "");
 
-			StringBuilder sb = new StringBuilder();
-			bool quote = false;
-			bool ignore = false;
-			int offset = 0;
-			int indentLength = 3;
-
-			foreach (char ch in json)
-			{
-				switch (ch)
-				{
-					case '"':
-						if (!ignore) quote = !quote;
-						break;
-					case '\'':
-						if (quote) ignore = !ignore;
-						break;
-				}
-
-				if (quote)
-					sb.Append(ch);
-				else
-				{
-					switch (ch)
-					{
-						case '{':
-						case '[':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', ++offset * indentLength));
-							break;
-						case '}':
-						case ']':
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', --offset * indentLength));
-							sb.Append(ch);
-							break;
-						case ',':
-							sb.Append(ch);
-							sb.Append(Environment.NewLine);
-							sb.Append(new string(' ', offset * indentLength));
-							break;
-						case ':':
-							sb.Append(ch);
-							sb.Append(' ');
-							break;
-						default:
-							if (ch != ' ') sb.Append(ch);
-							break;
-					}
-				}
-			}
-
-			return sb.ToString().Trim();
-		}
-	}
+            string INDENT_STRING = "    ";
+            var indent = 0;
+            var quoted = false;
+            var sb = new StringBuilder();
+            for (var i = 0; i < json.Length; i++)
+            {
+                var ch = json[i];
+                switch (ch)
+                {
+                    case '{':
+                    case '[':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, ++indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case '}':
+                    case ']':
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, --indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        sb.Append(ch);
+                        break;
+                    case '"':
+                        sb.Append(ch);
+                        bool escaped = false;
+                        var index = i;
+                        while (index > 0 && json[--index] == '\\')
+                            escaped = !escaped;
+                        if (!escaped)
+                            quoted = !quoted;
+                        break;
+                    case ',':
+                        sb.Append(ch);
+                        if (!quoted)
+                        {
+                            sb.AppendLine();
+                            Enumerable.Range(0, indent).ForEach(item => sb.Append(INDENT_STRING));
+                        }
+                        break;
+                    case ':':
+                        sb.Append(ch);
+                        if (!quoted)
+                            sb.Append(" ");
+                        break;
+                    default:
+                        sb.Append(ch);
+                        break;
+                }
+            }
+            return sb.ToString();
+        }
+    }
+    static class Extensions
+    {
+        public static void ForEach<T>(this IEnumerable<T> ie, Action<T> action)
+        {
+            foreach (var i in ie)
+            {
+                action(i);
+            }
+        }
+    }
 }
 ```
 
@@ -1360,3 +1424,6 @@ A successful response is returned in JSON. Following is an example of a successf
    }
 }
 ```
+## Next steps
+
+ * [Windows SDK for the Microsoft Computer Vision API](https://github.com/Microsoft/Cognitive-vision-windows)
